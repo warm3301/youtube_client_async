@@ -1,0 +1,2 @@
+aiohttp[speedups]
+aiohttp_retry

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+dynamic = ["version"]
+name = "youtube_client_async"
+requires-python = ">= 3.8"
+dependencies = [
+    "aiohttp[speedups]",
+    "aiohttp_retry"
+]
+description = "youtube client async. video, shorts, playlists, lives, channels, comments"
+license = {file = "LICENSE"}
+readme = "README.md"
+keywords = ["youtube parser", "youtube", "python", "python3"]
