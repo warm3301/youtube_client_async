@@ -1,6 +1,5 @@
 """getter comments info"""
 import base64
-import json
 from collections.abc import Sequence
 from enum import Enum
 from functools import cached_property
@@ -280,6 +279,7 @@ class EmojiInfo:
 
 
 class Comment:
+    """reply"""
     def __init__(
         self,
         renderer,
@@ -705,6 +705,7 @@ class CommentResponseGetter:
 
 
 class CommentResponseGetterWithoutFirstInfo(CommentResponseGetter):
+    """for short"""
     def __init__(
         self,
         current_item: CommentResponse,

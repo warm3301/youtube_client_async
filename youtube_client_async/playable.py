@@ -39,8 +39,6 @@ class PlayableBase(base_youtube.BaseYoutube, ABC):
         self._js_obj: Optional[str] = js if js else None
         self._js_url_obj: Optional[str] = js_url if js_url else None
         self.video_id = extract.video_id(self.parsed_url, self.parsed_query)
-        if self.video_id is None:
-            raise Exception(f"can't extract video_id {url}")
         self._signature_timestamp = None
         self._web_initial_player = None
         self._ios_initial_player = None
@@ -173,7 +171,7 @@ class PlayableBase(base_youtube.BaseYoutube, ABC):
         return get_from_dict(
             self.initial_player,
             "microformat|playerMicroformatRenderer|availableCountries",
-            throwEx=False,
+            throw_ex=False,
             default=[],
         )
 
@@ -318,7 +316,7 @@ class PlayableBase(base_youtube.BaseYoutube, ABC):
                 }
             }
         return self._signature_timestamp
-    
+
     async def get_streams(self) -> stream.StreamQuery:
         # self.it.innertube_context.update(await self._get_signature_timestamp())
         # new_player_info = await self.it.player(self.video_id)
