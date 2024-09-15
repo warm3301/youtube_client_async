@@ -122,7 +122,7 @@ class Post:
                 "replyButton"]["buttonRenderer"]["text"]["simpleText"]
         except KeyError:
             pass
-        self.published_time: str = helpers.get_from_dict(raw["publishedTimeText"])
+        self.published_time: str = raw["publishedTimeText"]
         self.attachment: Optional[PostAttachment] = None
         if "backstageAttachment" in raw:
             self.attachment = _get_attachment(raw["backstageAttachment"], net_obj, it)

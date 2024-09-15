@@ -32,7 +32,7 @@ class GetterPlayableFromChannelSortedType(Enum):
 
 
 class GetterPlaylistsFromChannelSortedType(Enum):
-    new = 0
+    create_date = 0
     update_date = 1
 
 
@@ -147,7 +147,7 @@ class PlaylistInfo:
             + raw["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"]
         )
         self.video_count_text: Optional[str] = (
-            " ".join([x["text"] for x in raw["videoCountText"]])
+            raw["videoCountText"]["runs"][0]["text"]
             if "videoCountText" in raw
             else None
         )
@@ -223,6 +223,8 @@ class TabContinuationContentBase(BaseTabContent, ABC):
         elif "sectionListRenderer" in raw:
             self._raw = raw["sectionListRenderer"]["contents"][0][
                 "itemSectionRenderer"]["contents"]
+            if isinstance(self._raw, list) and "gridRenderer" in self._raw[0]:
+                self._raw = self._raw[0]["gridRenderer"]["items"]
         else:
             raise NotImplementedError("dont know")
         self.continuation_token: Optional[str] = None
@@ -391,10 +393,13 @@ class TabPlaylistsContent(TabContinuationContentBase):
 
     async def __anext__(self) -> List[PlaylistInfo]:
         dn = await super().__anext__()
-        return [
-            PlaylistInfo(x["gridPlaylistRenderer"], self.net_obj, self.it)
-            for x in dn[0]["gridRenderer"]["items"]
-        ]
+        try:
+            return [
+                PlaylistInfo(x["gridPlaylistRenderer"], self.net_obj, self.it)
+                for x in dn
+            ]
+        except KeyError:
+            print(dn[0]["gridRenderer"]["items"][-1])
 
 
 class TabLiveStreamsContent(TabPlayableContentBase):
@@ -456,9 +461,6 @@ class Tab:
         if self.content:
             return self.content
         initial_data = extract.initial_data(await self.net_obj.get_text(self.url))
-        import json
-        with open("id.json","w") as file:
-            file.write(json.dumps({"url":self.url,"id":initial_data}))
         initial_data = initial_data["contents"]["twoColumnBrowseResultsRenderer"]["tabs"]
         ntc = None
         for x in initial_data:
@@ -588,13 +590,12 @@ class Channel(base_youtube.BaseYoutube):
         content = await shorts_tab_info.get_content()
         return TabCommunityContent(content, self.net_obj, self.it)
 
-    async def get_playlists_tab(
-        self,
-        sort_type: GetterPlaylistsFromChannelSortedType = GetterPlaylistsFromChannelSortedType.new,
-    ) -> TabPlaylistsContent:
+    async def get_playlists_tab(self) -> TabPlaylistsContent:
         playlist_tab_info = self.tabs_info.get_by_end_url("playlists")
         content = await playlist_tab_info.get_content()
-        return TabPlaylistsContent(content, sort_type, self.net_obj, self.it)
+        return TabPlaylistsContent(content, GetterPlaylistsFromChannelSortedType.create_date, self.net_obj, self.it)
+
+    # async def get_releases_tab(self) -> Tab
 
     async def get_live_streams_tab(
         self,

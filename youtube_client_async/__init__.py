@@ -2,7 +2,6 @@ from .base_youtube import BaseYoutube, get_base_youtube
 from .channel import (
     Channel,
     GetterPlayableFromChannelSortedType,
-    GetterPlaylistsFromChannelSortedType,
     get_channel,
 )
 from .comment import (
