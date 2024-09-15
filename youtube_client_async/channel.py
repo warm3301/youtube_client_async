@@ -159,16 +159,20 @@ class PlaylistInfo:
         return await playlist.get_playlist(self.url, self.net_obj, self.it)
 
 
-class StreamInfo:
+class LiveStreamVideoInfo:
     def __init__(self, raw, net_obj: net.SessionRequest, it: innertube.InnerTube):
         self.video_id: str = raw["videoId"]
-        self.title: str = helpers.get_text_by_runs("title")
+        self.title: str = helpers.get_text_by_runs(raw["title"])
         self.description_snippet: Optional[str] = None
         try:
             self.description_snippet = helpers.get_text_by_runs(raw["descriptionSnippet"])
         except KeyError:
             self.description_snippet = None
-        self.published_time: str = raw["publishedTimeText"]["simpleText"]
+        self.published_time: Optional[str] = (
+            raw["publishedTimeText"]["simpleText"] 
+            if "publishedTimeText" in raw
+            else None
+        )
         self.length_text: Optional[str] = None
         self.lenght_text_accessibility: Optional[str] = None
         try:
@@ -411,8 +415,8 @@ class TabLiveStreamsContent(TabPlayableContentBase):
         it: innertube.InnerTube,
     ):
         super().__init__(raw, sort_type, net_obj, it)
-        self._videos: List[StreamInfo] = [
-            StreamInfo(
+        self._videos: List[LiveStreamVideoInfo] = [
+            LiveStreamVideoInfo(
                 x["richItemRenderer"]["content"]["videoRenderer"],
                 self.net_obj,
                 self.it,
@@ -420,12 +424,12 @@ class TabLiveStreamsContent(TabPlayableContentBase):
             for x in self._raw
         ]
 
-    def __aiter__(self) -> AsyncIterator[List[StreamInfo]]:
+    def __aiter__(self) -> AsyncIterator[List[LiveStreamVideoInfo]]:
         return self
 
-    async def __anext__(self) -> List[StreamInfo]:
+    async def __anext__(self) -> List[LiveStreamVideoInfo]:
         return [
-            StreamInfo(
+            LiveStreamVideoInfo(
                 x["richItemRenderer"]["content"]["videoRenderer"],
                 self.net_obj,
                 self.it,
