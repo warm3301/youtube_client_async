@@ -122,29 +122,18 @@ class ShortInfo:
     def __init__(self, raw, net_obj: net.SessionRequest, it: innertube.InnerTube):
         self.net_obj: net.SessionRequest = net_obj
         self.it: innertube.InnerTube = it
-        self.title: str = raw["headline"]["simpleText"]
-
-        raw_th = raw["thumbnail"]["thumbnails"]
-        if (
-            "reelWatchEndpoint" in raw["navigationEndpoint"]
-            and "thumbnail" in raw["navigationEndpoint"]["reelWatchEndpoint"]
-        ):
-            raw_th += raw["navigationEndpoint"]["reelWatchEndpoint"]["thumbnail"][
-                "thumbnails"]
-
-        self.thumbnail: thumbnail.ThumbnailQuery = thumbnail.ThumbnailQuery(
-            raw_th, self.net_obj
-        )
-
-        self.video_id: str = raw["videoId"]
-        self.video_count: str = raw["viewCountText"]["simpleText"]
-        self.video_count_accessibility: str = raw["viewCountText"]["accessibility"][
-            "accessibilityData"]["label"]
-        self.label = raw["accessibility"]["accessibilityData"]["label"]
-        self.url = (
-            "https://youtube.com"
-            + raw["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"]
-        )
+        rir = raw["onTap"]["innertubeCommand"]
+        self.title: str = raw["overlayMetadata"]["primaryText"]["content"]
+        self.videw_count: str = raw["overlayMetadata"]["secondaryText"]["content"]
+        self.thumbnail:thumbnail.ThumbnailQuery(
+            raw["thumbnail"]["sources"] + rir["reelWatchEndpoint"]["thumbnail"]["thumbnails"],
+            net_obj)
+        self.accessibility_text: str = raw["accessibilityText"]
+        self.video_id: str = rir["reelWatchEndpoint"]["videoId"]
+        self.url: str = "https://youtube.com" + rir["commandMetadata"]["webCommandMetadata"]["url"]
+    
+    def __repr__(self) -> str:
+        return f"<youtube_client_async \"{self.title}\" >"
 
 
 class PlaylistInfo:
@@ -347,7 +336,7 @@ class TabShortsContent(TabPlayableContentBase):
         super().__init__(raw, video_sort, net_obj, it)
         self._videos: List[ShortInfo] = [
             ShortInfo(
-                x["richItemRenderer"]["content"]["reelItemRenderer"],
+                x["richItemRenderer"]["content"]["shortsLockupViewModel"],
                 self.net_obj,
                 self.it,
             )
@@ -360,7 +349,7 @@ class TabShortsContent(TabPlayableContentBase):
     async def __anext__(self) -> List[ShortInfo]:
         return [
             ShortInfo(
-                x["richItemRenderer"]["content"]["reelItemRenderer"],
+                x["richItemRenderer"]["content"]["shortsLockupViewModel"],
                 self.net_obj,
                 self.it,
             )
@@ -467,6 +456,9 @@ class Tab:
         if self.content:
             return self.content
         initial_data = extract.initial_data(await self.net_obj.get_text(self.url))
+        import json
+        with open("id.json","w") as file:
+            file.write(json.dumps({"url":self.url,"id":initial_data}))
         initial_data = initial_data["contents"]["twoColumnBrowseResultsRenderer"]["tabs"]
         ntc = None
         for x in initial_data:
@@ -528,6 +520,16 @@ class TabQuery:
         return f"<youtube_client_async.channel.TabQuery {titles} >"
 
 
+class DefaultChannelUrl(Enum):
+    featured = "/featured"
+    videos = "/videos"
+    shorts = "/shorts"
+    streams = "/streams"
+    releases = "/releases"
+    playlist = "/playlists"
+    community = "/community"
+
+
 class Channel(base_youtube.BaseYoutube):
     def __init__(
         self,
@@ -537,19 +539,17 @@ class Channel(base_youtube.BaseYoutube):
         it: innertube.InnerTube,
         initial_data=None,
         ytcfg=None,
+        default_tab:DefaultChannelUrl=DefaultChannelUrl.featured
     ):
-
-        #channel_url = url
         channel_url = "https://youtube.com" + extract.channel_id(url)
         self.featured_url = channel_url + "/featured"
-        super().__init__(self.featured_url, html, net_obj, it, initial_data, ytcfg)
+        super().__init__(channel_url + default_tab.value, html, net_obj, it, initial_data, ytcfg)
         self.videos_url = channel_url + "/videos"
         self.shorts_url = channel_url + "/shorts"
         self.streams_url = channel_url + "/streams"
         self.playlists_url = channel_url + "/playlists"
         self.community_url = channel_url + "/community"
-        self.list_channels_url = channel_url + "/channels"
-        self.about_url = channel_url + "/about"
+        self.releases_url = channel_url + "/releases"
 
     @cached_property
     def tabs_info(self) -> TabQuery:
@@ -594,7 +594,7 @@ class Channel(base_youtube.BaseYoutube):
     ) -> TabPlaylistsContent:
         playlist_tab_info = self.tabs_info.get_by_end_url("playlists")
         content = await playlist_tab_info.get_content()
-        return TabPlaylistsContent(content, playlist_sorted_type, self.net_obj, self.it)
+        return TabPlaylistsContent(content, sort_type, self.net_obj, self.it)
 
     async def get_live_streams_tab(
         self,
@@ -713,7 +713,8 @@ async def get_channel(
     html: Optional[str] = None,
     initial_data: Optional[dict] = None,
     ytcfg: Optional[dict] = None,
+    default_tab: DefaultChannelUrl = DefaultChannelUrl.featured
 ) -> Channel:
 
     c_html = html if html else await net_obj.get_text(url)
-    return Channel(url, c_html, net_obj, it, initial_data, ytcfg)
+    return Channel(url, c_html, net_obj, it, initial_data, ytcfg, default_tab)
