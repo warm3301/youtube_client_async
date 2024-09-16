@@ -18,18 +18,18 @@
 ### Пример загрузки
 ```
 import asyncio
-import youtube_client_async as yca
+import youtube_client_async as yc
 async main():
     url = ""
-    async with yca.SessionRequest as sr:        # создаем сессию aiohttp. Этот класс - обёртка.
-        it = yca.InnerTube(sr)                  # InnerTube - позволяет получить комментарии
-        video = await yca.get_video(url, sr, it)
+    async with yc.SessionRequest as sr:        # создаем сессию aiohttp. Этот класс - обёртка.
+        it = yc.InnerTube(sr)                  # InnerTube - позволяет получить комментарии
+        video = await yc.get_video(url, sr, it)
         print("title", video.title)
         print("lenght is seconds", video.lenght)
 
         streams = await video.get_streams()
         stream = streams.get_highest_resolution()
-        downloaded = await yca.simple_download(stream,"res")
+        downloaded = await yc.simple_download(stream,"res")
         print(f"{downloaded:.2f}")
         
 
@@ -41,16 +41,16 @@ if __name__ == "__main__":
 ### Загрузка с callback
 ```
 import asyncio
-import youtube_client_async as yca
+import youtube_client_async as yc
 import time
 
 
 async def main():
     url = ""
 
-    async with yca.SessionRequest() as sr:
-        it = yca.InnerTube(sr,)
-        pl = await yca.get_video(url,sr,it)
+    async with yc.SessionRequest() as sr:
+        it = yc.InnerTube(sr,)
+        pl = await yc.get_video(url,sr,it)
         print("title", pl.title)
         print("lenght is seconds", video.lenght)
 
@@ -81,7 +81,7 @@ async def main():
 
 
         current_time = time.time()
-        downloaded = await yca.simple_download(stream,"res",callback=show_message)
+        downloaded = await yc.simple_download(stream,"res",callback=show_message)
         
         time_delta = time.time() - current_time
         print(f"\n{time_delta:.2f} seconds")
