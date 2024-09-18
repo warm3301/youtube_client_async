@@ -545,17 +545,16 @@ class Channel(base_youtube.BaseYoutube):
         it: innertube.InnerTube,
         initial_data=None,
         ytcfg=None,
-        default_tab:DefaultChannelUrl=DefaultChannelUrl.featured
     ):
+        super().__init__(url, html, net_obj, it, initial_data, ytcfg)
         channel_url = "https://youtube.com" + extract.channel_id(url)
-        self.featured_url = channel_url + "/featured"
-        super().__init__(channel_url + default_tab.value, html, net_obj, it, initial_data, ytcfg)
-        self.videos_url = channel_url + "/videos"
-        self.shorts_url = channel_url + "/shorts"
-        self.streams_url = channel_url + "/streams"
-        self.playlists_url = channel_url + "/playlists"
-        self.community_url = channel_url + "/community"
-        self.releases_url = channel_url + "/releases"
+        self.featured_url = channel_url + DefaultChannelUrl.featured.value
+        self.videos_url = channel_url + DefaultChannelUrl.videos.value
+        self.shorts_url = channel_url + DefaultChannelUrl.shorts.value
+        self.streams_url = channel_url + DefaultChannelUrl.streams.value
+        self.releases_url = channel_url + DefaultChannelUrl.releases.value
+        self.playlists_url = channel_url + DefaultChannelUrl.playlist.value
+        self.community_url = channel_url + DefaultChannelUrl.community.value
 
     @cached_property
     def tabs_info(self) -> TabQuery:
@@ -720,6 +719,7 @@ async def get_channel(
     ytcfg: Optional[dict] = None,
     default_tab: DefaultChannelUrl = DefaultChannelUrl.featured
 ) -> Channel:
-
-    c_html = html if html else await net_obj.get_text(url)
-    return Channel(url, c_html, net_obj, it, initial_data, ytcfg, default_tab)
+    channel_url = "https://youtube.com" + extract.channel_id(url)
+    current_url = url + default_tab.value
+    c_html = html if html else await net_obj.get_text(current_url)
+    return Channel(url, c_html, net_obj, it, initial_data, ytcfg)

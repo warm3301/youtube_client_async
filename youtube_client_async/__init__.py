@@ -3,6 +3,7 @@ from .channel import (
     Channel,
     GetterPlayableFromChannelSortedType,
     get_channel,
+    DefaultChannelUrl
 )
 from .comment import (
     Comment,
