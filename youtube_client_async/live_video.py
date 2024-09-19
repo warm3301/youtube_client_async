@@ -57,7 +57,7 @@ class LiveMetadataUpdater:
                 res["date"] = prop["updateDateTextAction"]["dateText"]["simpleText"]
             elif "updateTitleAction" in prop:
                 res["title"] = helpers.get_text_by_runs(prop["updateTitleAction"]["title"])
-            elif "updateDescriptionAction" in prop:
+            elif "updateDescriptionAction" in prop and "description" in prop["updateDescriptionAction"]:
                 res["description"] = helpers.get_text_by_runs(prop["updateDescriptionAction"]["description"])
         continuation = raw["continuation"]["timedContinuationData"]["continuation"]
         return res, continuation
