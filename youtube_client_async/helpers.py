@@ -28,6 +28,8 @@ def is_vereficated(raw) -> bool:
         return False
 
 def get_text_by_runs(raw) -> str:
+    if "simpleText" in raw:
+        return raw["simpleText"]
     return " ".join([x["text"] for x in raw["runs"]])
 
 

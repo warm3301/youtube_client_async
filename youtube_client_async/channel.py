@@ -406,6 +406,25 @@ class TabPlaylistsContent(TabContinuationContentBase):
             print(dn[0]["gridRenderer"]["items"][-1])
 
 
+class TabReleasesContent(TabContinuationContentBase):
+    def __init__(
+        self,
+        raw: str,
+        net_obj: net.SessionRequest,
+        it: innertube.InnerTube
+    ):
+        super().__init__(raw, net_obj, it)
+
+    def __aiter__(self) -> AsyncIterator[List[PlaylistInfo]]:
+        return self
+
+    async def __anext__(self) -> List[PlaylistInfo]:
+        dn = await super().__anext__()
+        return [
+            PlaylistInfo(x["richItemRenderer"]["content"]["playlistRenderer"], self.net_obj, self.it)
+            for x in dn
+        ]
+
 class TabLiveStreamsContent(TabPlayableContentBase):
     def __init__(
         self,
@@ -571,11 +590,13 @@ class Channel(base_youtube.BaseYoutube):
     def __repr__(self) -> str:
         return f"<Channel {self.url}/>"
 
+    #TODO get_home
+
     async def get_videos_tab(
         self,
         sort_type: GetterPlayableFromChannelSortedType = GetterPlayableFromChannelSortedType.new,
     ) -> TabVideosContent:
-        videos_tab_info = self.tabs_info.get_by_end_url("videos")
+        videos_tab_info = self.tabs_info.get_by_end_url(DefaultChannelUrl.videos.value)
         content = await videos_tab_info.get_content()
         return TabVideosContent(content, sort_type, self.net_obj, self.it)
 
@@ -583,36 +604,40 @@ class Channel(base_youtube.BaseYoutube):
         self,
         sort_type: GetterPlayableFromChannelSortedType = GetterPlayableFromChannelSortedType.new,
     ) -> TabShortsContent:
-        shorts_tab_info = self.tabs_info.get_by_end_url("shorts")
+        shorts_tab_info = self.tabs_info.get_by_end_url(DefaultChannelUrl.shorts.value)
         content = await shorts_tab_info.get_content()
         return TabShortsContent(content, sort_type, self.net_obj, self.it)
-
-    async def get_community_tab(self) -> TabCommunityContent:
-        # TODO sort
-        shorts_tab_info = self.tabs_info.get_by_end_url("community")
-        content = await shorts_tab_info.get_content()
-        return TabCommunityContent(content, self.net_obj, self.it)
-
-    async def get_playlists_tab(self) -> TabPlaylistsContent:
-        playlist_tab_info = self.tabs_info.get_by_end_url("playlists")
-        content = await playlist_tab_info.get_content()
-        return TabPlaylistsContent(content, GetterPlaylistsFromChannelSortedType.create_date, self.net_obj, self.it)
-
-    # async def get_releases_tab(self) -> Tab
 
     async def get_live_streams_tab(
         self,
         sort_type: GetterPlayableFromChannelSortedType = GetterPlayableFromChannelSortedType.new,
     ) -> TabLiveStreamsContent:
-        live_tab_info = self.tabs_info.get_by_end_url("streams")
+        live_tab_info = self.tabs_info.get_by_end_url(DefaultChannelUrl.streams.value)
         content = await live_tab_info.get_content()
         return TabLiveStreamsContent(content, sort_type, self.net_obj, self.it)
+
+    async def get_playlists_tab(self) -> TabPlaylistsContent:
+        playlist_tab_info = self.tabs_info.get_by_end_url(DefaultChannelUrl.playlist.value)
+        content = await playlist_tab_info.get_content()
+        return TabPlaylistsContent(content, GetterPlaylistsFromChannelSortedType.create_date, self.net_obj, self.it)
+
+    async def get_releases_tab(self) -> TabReleasesContent:
+        releases_tab = self.tabs_info.get_by_end_url(DefaultChannelUrl.releases.value)
+        content = await releases_tab.get_content()
+        return TabReleasesContent(content, self.net_obj, self.it)
+
+    async def get_community_tab(self) -> TabCommunityContent:
+        # TODO sort
+        shorts_tab_info = self.tabs_info.get_by_end_url(DefaultChannelUrl.community.value)
+        content = await shorts_tab_info.get_content()
+        return TabCommunityContent(content, self.net_obj, self.it)
 
     async def get_search_tab(self) -> TabSearchContent:
         search_tab_info = self.tabs_info.get_by_end_url("search")
         return TabSearchContent(
             await search_tab_info.get_content(), self.net_obj, self.it
         )
+
 
     @property
     def _metadata_renderer(self) -> dict:
