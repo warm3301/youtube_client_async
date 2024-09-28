@@ -180,7 +180,7 @@ class SearchPostInfo(SearchResultInfo):
         return f"<PostResult {self.post_id=}/>"
 
 
-def get_obj(
+def _get_obj(
     x_raw,
     net_obj: net.SessionRequest,
     it: innertube.InnerTube
@@ -265,7 +265,7 @@ class SearchResponse:
             ] = None
         raw_content = raw["onResponseReceivedCommands"][0]["appendContinuationItemsAction"]["continuationItems"]
         self.continuation: Optional[str] = None
-        self.content = (get_obj(x, net_obj, it) for x in raw_content[0]["itemSectionRenderer"]["contents"])
+        self.content = (_get_obj(x, net_obj, it) for x in raw_content[0]["itemSectionRenderer"]["contents"])
         try:
             self.continuation = raw_content[1]["continuationItemRenderer"]["continuationEndpoint"][
                 "continuationCommand"]["token"]
@@ -295,7 +295,7 @@ class SearchResponseFirst:
         self._sub_menu_raw: dict = raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
             "sectionListRenderer"]["subMenu"]
         self.content = (
-            get_obj(x, net_obj, it)
+            _get_obj(x, net_obj, it)
             for x in raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
                 "sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
         )
@@ -331,3 +331,6 @@ class Search():
             crf = SearchResponse(await self.it.search(None, self.current_continuation), self.net_obj, self.it)
         self.current_continuation = crf.continuation
         return crf
+
+def get_search(query:str, net_obj:net.SessionRequest, it:innertube.InnerTube) -> Search:
+    return Search(query, net_obj, it)

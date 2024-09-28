@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
 from urllib import parse
 
 from . import extract, helpers, innertube, net, thumbnail, video
@@ -110,7 +110,7 @@ class LiveChatMessage:
         return f"<LiveChatMessage \"{self.message}\" />"
 
 
-class LiveChatResponce:
+class LiveChatResponse:
     def __init__(self, raw, net_obj: net.SessionRequest, it: innertube.InnerTube):
         self.raw = raw 
         self.net_obj: net.SessionRequest = net_obj
@@ -140,11 +140,19 @@ class LiveChat:
         self.net_obj: net.SessionRequest = net_obj
         self.it: innertube.InnerTube = it
 
-    async def get_responce(self) -> LiveChatResponce:
+    async def get_response(self) -> LiveChatResponse:
         resp = await self.it.live_chat(self._continuation)
-        res = LiveChatResponce(resp, self.net_obj, self.it)
+        res = LiveChatResponse(resp, self.net_obj, self.it)
         self._continuation = res._continuation_token
         return res
+
+    def __aiter__(self) -> AsyncIterator[LiveChatResponse]:
+        return self
+
+    async def __anext__(self) -> LiveChatResponse:
+        return await self.get_response()
+
+
 
 
 class LiveVideo(video.VideoBase):

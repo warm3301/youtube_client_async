@@ -19,7 +19,7 @@ from .innertube import InnerTube
 from .live_video import (
     LiveChat,
     LiveChatMessage,
-    LiveChatResponce,
+    LiveChatResponse,
     LiveMetadata,
     LiveMetadataUpdater,
     LiveVideo,
@@ -45,6 +45,7 @@ from .post import (
 )
 from .search import (
     Search,
+    get_search,
     SearchChannelInfo,
     SearchChapter,
     SearchDidYouMeanInfo,
