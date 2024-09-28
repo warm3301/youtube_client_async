@@ -59,3 +59,4 @@ from .simple_downloader import simple_download
 from .thumbnail import Thumbnail, ThumbnailQuery
 from .version import __version__
 from .video import Video, get_video, get_video_embed_url, get_video_id, get_video_url
+from .helpers import async_islice

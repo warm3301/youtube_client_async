@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from random import choice
 from string import ascii_lowercase, ascii_uppercase
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, AsyncIterator, TypeVar
 
 from .exceptions import HTMLParseError, RegexMatchError
 
@@ -20,6 +20,16 @@ logger = logging.getLogger(__name__)
 # handler.setFormatter(formatter)
 # logger.addHandler(handler)
 
+
+T = TypeVar('T')
+
+async def async_islice(aiterable: AsyncIterator[T], limit:int) -> AsyncIterator[T]:
+    count = 0
+    async for item in aiterable:
+        if count >= limit:
+            break
+        count +=1
+        yield item
 
 def is_vereficated(raw) -> bool:
     try:
