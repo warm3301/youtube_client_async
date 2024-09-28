@@ -44,7 +44,7 @@ from .post import (
     get_post,
 )
 from .search import (
-    Search,
+    SearchGetter,
     get_search,
     SearchChannelInfo,
     SearchChapter,

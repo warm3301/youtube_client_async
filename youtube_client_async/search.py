@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
 
 from . import (
     channel,
@@ -146,10 +146,10 @@ class SearchDidYouMeanInfo:
         self.correct_arr: List[Tuple[str, bool]] = [(x["text"], x.get("italics", False)) for x in raw["correctedQuery"]["runs"]]
         self.corrected_query: str = raw["correctedQueryEndpoint"]["searchEndpoint"]["query"]
         self.corrected_words: str = " ".join([x[0] for x in self.correct_arr if x[1]])
-        self.initial_query: str = raw["originalQuery"]["simpleText"]
+        self.initial_query: Optional[str] = raw["originalQuery"]["simpleText"] if "originalQuery" in raw else None
 
     def __repr__(self)->str:
-        return f"<DidYouMean \"{self.initial_query=}\" \"{self.corrected_query=}\" >"
+        return f"<SearchDidYouMeanInfo \"{self.initial_query=}\" \"{self.corrected_query=}\" >"
 
 
 class SearchPostInfo(SearchResultInfo):
@@ -195,65 +195,71 @@ def _get_obj(
         None]:
 
     obj = None
-    if "videoRenderer" in x_raw:
-        r = x_raw["videoRenderer"]
-        obj = SearchVideoInfo(r, net_obj, it)
-    elif "reelShelfRenderer" in x_raw:  # shorts list
-        obj = []
-        for short in x_raw["reelShelfRenderer"]["items"]:
-            r = short["reelItemRenderer"]
-            so = SearchShortInfo(r, net_obj, it)  # url=f"https://youtube.com/shorts/{r['videoId']}"
-            obj.append(so)
-    elif "radioRenderer" in x_raw:
-        r = x_raw["radioRenderer"]
-        obj = SearchPlaylistInfo(r, net_obj, it)  # url=f"https://youtube.com/watch?list={r['playlistId']}"
-        # obj.title = r["title"]["simpleText"]
-    elif "channelRenderer" in x_raw:
-        r = x_raw["channelRenderer"]
-        obj = SearchChannelInfo(r, net_obj, it)  # url="https://youtube.com"+r["navigationEndpoint"]["browseEndpoint"]["canonicalBaseUrl"]
-        # obj.name = r["title"]["simpleText"]
-    elif "shelfRenderer" in x_raw:  # people also watched
-        r = x_raw["shelfRenderer"]["content"]
-        obj = []
-        if "verticalListRenderer" in r:
-            for video_raw in r["verticalListRenderer"]["items"]:
-                if "videoRenderer" in video_raw:
-                    r = video_raw["videoRenderer"]
-                    video = SearchVideoInfo(r, net_obj, it)  # r["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"] #TODO get url
-                    # video.title = " ".join([x["text"] for x in r["title"]["runs"]])
-                    # video.id =r["videoId"]
-                    obj.append(video)
-                else:
-                    helpers.logger.warning(f"while search not found video renderer {video_raw}")
-                    obj.append(None)
-        if "horizontalListRenderer" in r:
-            for post_raw in r["horizontalListRenderer"]["items"]:
-                if "postRenderer" in post_raw:
-                    obj.append(SearchPostInfo(post_raw["postRenderer"], net_obj, it))
-                else:
-                    helpers.logger.warning(f"while search not found postrenderer {post_raw}")
-                    obj.append(None)
-    elif "playlistRenderer" in x_raw:
-        r = x_raw["playlistRenderer"]
-        obj = SearchPlaylistInfo(r, net_obj, it)  # url="https://youtube.com"+r["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"]
-    elif "backgroundPromoRenderer" in x_raw and x_raw["backgroundPromoRenderer"]["icon"]["iconType"] == "EMPTY_SEARCH":
-        raise Exception("Empty search")
-    elif "didYouMeanRenderer" in x_raw:  # TODO move up
-        obj = SearchDidYouMeanInfo(x_raw["didYouMeanRenderer"])
-    elif "showingResultsForRenderer" in x_raw:
-        obj = SearchDidYouMeanInfo(x_raw["showingResultsForRenderer"])
-    else:
-        helpers.logger.warning(f"while search not found video renderer {x_raw}")
-        return None
+    try:
+        if "videoRenderer" in x_raw:
+            r = x_raw["videoRenderer"]
+            obj = SearchVideoInfo(r, net_obj, it)
+        elif "reelShelfRenderer" in x_raw:  # shorts list
+            obj = []
+            for short in x_raw["reelShelfRenderer"]["items"]:
+                r = short["reelItemRenderer"]#TODO Errorr
+                so = SearchShortInfo(r, net_obj, it)  # url=f"https://youtube.com/shorts/{r['videoId']}"
+                obj.append(so)
+        elif "radioRenderer" in x_raw:
+            r = x_raw["radioRenderer"]
+            obj = SearchPlaylistInfo(r, net_obj, it)  # url=f"https://youtube.com/watch?list={r['playlistId']}"
+            # obj.title = r["title"]["simpleText"]
+        elif "channelRenderer" in x_raw:
+            r = x_raw["channelRenderer"]
+            obj = SearchChannelInfo(r, net_obj, it)  # url="https://youtube.com"+r["navigationEndpoint"]["browseEndpoint"]["canonicalBaseUrl"]
+            # obj.name = r["title"]["simpleText"]
+        elif "shelfRenderer" in x_raw:  # people also watched
+            r = x_raw["shelfRenderer"]["content"]
+            obj = []
+            if "verticalListRenderer" in r:
+                for video_raw in r["verticalListRenderer"]["items"]:
+                    if "videoRenderer" in video_raw:
+                        r = video_raw["videoRenderer"]
+                        video = SearchVideoInfo(r, net_obj, it)  # r["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"] #TODO get url
+                        # video.title = " ".join([x["text"] for x in r["title"]["runs"]])
+                        # video.id =r["videoId"]
+                        obj.append(video)
+                    else:
+                        helpers.logger.warning(f"while search not found video renderer {video_raw}")
+                        obj.append(None)
+            if "horizontalListRenderer" in r:
+                for post_raw in r["horizontalListRenderer"]["items"]:
+                    if "postRenderer" in post_raw:
+                        obj.append(SearchPostInfo(post_raw["postRenderer"], net_obj, it))
+                    else:
+                        helpers.logger.warning(f"while search not found postrenderer {post_raw}")
+                        obj.append(None)
+        elif "playlistRenderer" in x_raw:
+            r = x_raw["playlistRenderer"]
+            obj = SearchPlaylistInfo(r, net_obj, it)  # url="https://youtube.com"+r["navigationEndpoint"]["commandMetadata"]["webCommandMetadata"]["url"]
+        elif "backgroundPromoRenderer" in x_raw and x_raw["backgroundPromoRenderer"]["icon"]["iconType"] == "EMPTY_SEARCH":
+            raise Exception("Empty search")
+        elif "didYouMeanRenderer" in x_raw:  # TODO move up
+            obj = SearchDidYouMeanInfo(x_raw["didYouMeanRenderer"])
+        elif "showingResultsForRenderer" in x_raw:
+            obj = SearchDidYouMeanInfo(x_raw["showingResultsForRenderer"])
+        else:
+            helpers.logger.warning(f"while search not found video renderer {x_raw}")
+            return None
+    except Exception as e:
+        helpers.logger.error(f"search error _get_obj {e}")
+        obj = None
     return obj
 
-
 class SearchResponse:
-    def __init__(self, raw, net_obj: net.SessionRequest, it: innertube.InnerTube):
+    def __init__(self, raw: dict, net_obj: net.SessionRequest, it: innertube.InnerTube):
+        self.net_obj: net.SessionRequest = net_obj
+        self.it: innertube.InnerTube = it
         self.estimated_results: str = raw.get("estimatedResults")
+        self.continuation: Optional[str] = None
+
         self.content: Iterable[
             Union[
-                SearchDidYouMeanInfo,
                 SearchVideoInfo,
                 List[SearchPostInfo],
                 SearchPlaylistInfo,
@@ -263,23 +269,64 @@ class SearchResponse:
                 None
                 ]
             ] = None
-        raw_content = raw["onResponseReceivedCommands"][0]["appendContinuationItemsAction"]["continuationItems"]
+
+        if "onResponseReceivedCommands" in raw:
+            raw_content = raw["onResponseReceivedCommands"][0]["appendContinuationItemsAction"]["continuationItems"]
+            
+            self.content =(_get_obj(x, net_obj, it) for x in raw_content[0]["itemSectionRenderer"]["contents"])
+            try:
+                self.continuation = raw_content[1]["continuationItemRenderer"]["continuationEndpoint"][
+                    "continuationCommand"]["token"]
+            except KeyError:
+                self.continuation = None
+            except IndexError:
+                self.continuation = None
+
+        else:
+            self.content = (
+                _get_obj(x, net_obj, it)
+                for x in raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
+                    "sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
+            )
+            try:
+                self.continuation = raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
+                    "sectionListRenderer"]["contents"][1]["continuationItemRenderer"]["continuationEndpoint"][
+                    "continuationCommand"]["token"]
+            except KeyError:
+                self.continuation = None
+            except IndexError:
+                self.continuation = None
+
+    def __repr__(self) -> str:
+        return f"<SearchResponse {self.__hash__()}>"
+
+    def __iter__(self) -> Iterator[Union[
+                SearchVideoInfo,
+                List[SearchPostInfo],
+                SearchPlaylistInfo,
+                SearchChannelInfo,
+                List[SearchShortInfo],
+                List[SearchVideoInfo],
+                None
+                ]
+            ]:
+        return self.content
+
+
+SearchGetterType = TypeVar("SearchGetterType", bound="SearchGetter")
+class SearchGetter:
+    def __init__(self, raw: dict, net_obj: net.SessionRequest, it: innertube.InnerTube):
+        self.net_obj: net.SessionRequest = net_obj
+        self.it: innertube.InnerTube = it
+        self.f:bool = True
+        self._raw:dict = raw
         self.continuation: Optional[str] = None
-        self.content = (_get_obj(x, net_obj, it) for x in raw_content[0]["itemSectionRenderer"]["contents"])
-        try:
-            self.continuation = raw_content[1]["continuationItemRenderer"]["continuationEndpoint"][
-                "continuationCommand"]["token"]
-        except KeyError:
-            self.continuation = None
-        except IndexError:
-            self.continuation = None
 
-
-class SearchResponseFirst:
-    def __init__(self, raw, net_obj: net.SessionRequest, it: innertube.InnerTube):
-        self.content: Iterable[
+        self.refinements: Optional[List[str]] = raw.get('refinements')
+        self._sub_menu_raw: dict = raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
+            "sectionListRenderer"]["subMenu"]
+        _content: List[
             Union[
-                SearchDidYouMeanInfo,
                 SearchVideoInfo,
                 List[SearchPostInfo],
                 SearchPlaylistInfo,
@@ -289,16 +336,17 @@ class SearchResponseFirst:
                 None
             ]
         ] = None
-        self.continuation: Optional[str] = None
-        self.refinements: Optional[List[str]] = raw.get('refinements')
-        self.estimated_results: str = raw.get("estimatedResults")
-        self._sub_menu_raw: dict = raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
-            "sectionListRenderer"]["subMenu"]
-        self.content = (
+        _content = [
             _get_obj(x, net_obj, it)
             for x in raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
                 "sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
-        )
+        ]
+        self.did_you_mean: Optional[SearchDidYouMeanInfo] = None
+        for x in _content:
+            if isinstance(x,SearchDidYouMeanInfo):
+                self.did_you_mean = x
+                _content.remove(self.did_you_mean)
+                break
         try:
             self.continuation = raw["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"][
                 "sectionListRenderer"]["contents"][1]["continuationItemRenderer"]["continuationEndpoint"][
@@ -307,30 +355,18 @@ class SearchResponseFirst:
             self.continuation = None
         except IndexError:
             self.continuation = None
-
-
-SearchType = TypeVar("SearchType", bound="Search")
-class Search():
-    def __init__(self, query: str, net_obj: net.SessionRequest, it: innertube.InnerTube, continuaion: Optional[str] = None):
-        self.query: str = query
-        self.net_obj: net.SessionRequest = net_obj
-        self.it: innertube.InnerTube = it
-        self.continuation = continuaion
-        self.current_continuation = self.continuation
-        self.f = True
-
-    def __aiter__(self) -> SearchType:
+    def __aiter__(self) -> SearchGetterType:
         return self
 
-    async def __anext__(self) -> Union[SearchResponseFirst, SearchResponse]:
+    async def __anext__(self) -> SearchResponse:
         crf = None
         if self.f:
             self.f = False
-            crf = SearchResponseFirst(await self.it.search(self.query), self.net_obj, self.it)
+            crf = SearchResponse(self._raw, self.net_obj, self.it)
         else:
-            crf = SearchResponse(await self.it.search(None, self.current_continuation), self.net_obj, self.it)
-        self.current_continuation = crf.continuation
+            crf = SearchResponse(await self.it.search(None, self.continuation), self.net_obj, self.it)
+        self.continuation = crf.continuation
         return crf
 
-def get_search(query:str, net_obj:net.SessionRequest, it:innertube.InnerTube) -> Search:
-    return Search(query, net_obj, it)
+async def get_search(query:str, net_obj:net.SessionRequest, it:innertube.InnerTube) -> SearchGetter:
+    return SearchGetter(await it.search(query), net_obj, it)

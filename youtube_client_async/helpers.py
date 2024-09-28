@@ -13,11 +13,11 @@ from typing import Any, Optional, Union
 from .exceptions import HTMLParseError, RegexMatchError
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")  # - %(name)s
-handler.setFormatter(formatter)
+# logger.setLevel(logging.DEBUG)
+# handler = logging.StreamHandler(sys.stdout)
+# handler.setLevel(logging.DEBUG)
+# formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")  # - %(name)s
+# handler.setFormatter(formatter)
 # logger.addHandler(handler)
 
 
